@@ -3,9 +3,6 @@ const OpenAI = require("openai");
 const SpotifyWebApi = require("spotify-web-api-node");
 require("dotenv").config();
 
-import dotenv from "dotenv";
-dotenv.config();
-
 const app = express();
 
 app.use(express.json());
@@ -85,4 +82,6 @@ app.post("/generate-playlist", async (req, res) => {
     res.status(500).json({ error: "AI failed" });
   }
 });
+app.listen(3000, () => {
+  console.log("Server running at http://localhost:3000");
 });
