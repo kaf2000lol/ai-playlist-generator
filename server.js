@@ -48,18 +48,16 @@ app.get("/callback", async (req, res) => {
 });
 
 app.post("/generate-playlist", async (req, res) => {
-
   try {
 
     const mood = req.body.mood;
 
-    // Generate songs with OpenAI
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
         {
           role: "system",
-          content: "Generate a 10 song playlist. Format: Song - Artist"
+          content: "Create a 10 song playlist. Format exactly: Song - Artist"
         },
         {
           role: "user",
@@ -68,47 +66,23 @@ app.post("/generate-playlist", async (req, res) => {
       ]
     });
 
-    const songs = completion.choices[0].message.content.split("\n");
+    const songs = completion.choices[0].message.content
+      .split("\n")
+      .filter(Boolean);
 
-    // Get Spotify user
-    const me = await spotifyApi.getMe();
-
-    const playlist = await spotifyApi.createPlaylist(me.body.id, {
-      name: `AI Mood Playlist: ${mood}`,
-      public: true
+    const playlist = songs.map(song => {
+      const query = encodeURIComponent(song);
+      return {
+        title: song,
+        youtube: `https://www.youtube.com/results?search_query=${query}`
+      };
     });
 
-    const trackUris = [];
-
-    for (let song of songs) {
-
-      const search = await spotifyApi.searchTracks(song);
-
-      if (search.body.tracks.items.length > 0) {
-        trackUris.push(search.body.tracks.items[0].uri);
-      }
-
-    }
-
-    await spotifyApi.addTracksToPlaylist(
-      playlist.body.id,
-      trackUris
-    );
-
-    res.json({
-      message: "Playlist created!",
-      playlist: playlist.body.external_urls.spotify
-    });
+    res.json({ playlist });
 
   } catch (err) {
-
     console.error(err);
-    res.status(500).json({ error: "Something failed" });
-
+    res.status(500).json({ error: "AI failed" });
   }
-
 });
-
-app.listen(3000, () => {
-  console.log("Running on http://localhost:3000");
 });
