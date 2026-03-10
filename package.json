@@ -1,1 +1,15 @@
-
+{
+  "name": "ai-playlist-generator",
+  "version": "1.0.0",
+  "description": "AI Playlist Generator",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "openai": "^4.52.0"
+  }
+}
