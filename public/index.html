@@ -28,9 +28,38 @@ Generate Playlist
 
 </body>
   
-<a href="/login">
-  <button>Connect Spotify</button>
-</a>
+<div id="playlist"></div>
+
+<script>
+async function generate() {
+
+  const mood = document.getElementById("mood").value;
+
+  const res = await fetch("/generate-playlist", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ mood })
+  });
+
+  const data = await res.json();
+
+  const container = document.getElementById("playlist");
+  container.innerHTML = "";
+
+  data.playlist.forEach(song => {
+
+    const link = document.createElement("a");
+    link.href = song.youtube;
+    link.target = "_blank";
+    link.textContent = song.title;
+
+    container.appendChild(link);
+    container.appendChild(document.createElement("br"));
+
+  });
+
+}
+</script>
 
   
 </html>
