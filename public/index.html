@@ -1,3 +1,14 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>AI Playlist Generator</title>
+</head>
+
+<body>
+
+<h1>🎧 AI Playlist Generator</h1>
+
 <input id="moodInput" placeholder="ex: late night coding">
 
 <button onclick="generate()">Generate Playlist</button>
@@ -5,13 +16,14 @@
 <div id="playlist"></div>
 
 <script>
+
 async function generate() {
 
   const mood = document.getElementById("moodInput").value;
 
   const res = await fetch("/generate-playlist", {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
+    headers: { "Content-Type":"application/json" },
     body: JSON.stringify({ mood })
   });
 
@@ -33,4 +45,8 @@ async function generate() {
   });
 
 }
+
 </script>
+
+</body>
+</html>
