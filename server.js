@@ -1,5 +1,6 @@
 const express = require("express");
 const OpenAI = require("openai");
+const SpotifyWebApi = require("spotify-web-api-node");
 require("dotenv").config();
 
 import dotenv from "dotenv";
@@ -14,8 +15,36 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/public/index.html");
+const spotifyApi = new SpotifyWebApi({
+  clientId: process.env.SPOTIFY_CLIENT_ID,
+  clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  redirectUri: process.env.REDIRECT_URI
+});
+
+app.get("/login", (req, res) => {
+
+  const scopes = [
+    "playlist-modify-public",
+    "playlist-modify-private"
+  ];
+
+  const authorizeURL = spotifyApi.createAuthorizeURL(scopes);
+
+  res.redirect(authorizeURL);
+
+});
+
+app.get("/callback", async (req, res) => {
+
+  const code = req.query.code;
+
+  const data = await spotifyApi.authorizationCodeGrant(code);
+
+  spotifyApi.setAccessToken(data.body.access_token);
+  spotifyApi.setRefreshToken(data.body.refresh_token);
+
+  res.send("Spotify connected! Go back and generate a playlist.");
+
 });
 
 app.post("/generate-playlist", async (req, res) => {
@@ -24,36 +53,62 @@ app.post("/generate-playlist", async (req, res) => {
 
     const mood = req.body.mood;
 
+    // Generate songs with OpenAI
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
         {
           role: "system",
-          content: "You are a music expert that creates playlists."
+          content: "Generate a 10 song playlist. Format: Song - Artist"
         },
         {
           role: "user",
-          content: `Create a 10 song playlist for someone feeling: ${mood}. 
-          Format like: Song - Artist`
+          content: `Mood: ${mood}`
         }
       ]
     });
 
-    const playlist = completion.choices[0].message.content;
+    const songs = completion.choices[0].message.content.split("\n");
 
-    res.json({ playlist });
+    // Get Spotify user
+    const me = await spotifyApi.getMe();
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to generate playlist" });
+    const playlist = await spotifyApi.createPlaylist(me.body.id, {
+      name: `AI Mood Playlist: ${mood}`,
+      public: true
+    });
+
+    const trackUris = [];
+
+    for (let song of songs) {
+
+      const search = await spotifyApi.searchTracks(song);
+
+      if (search.body.tracks.items.length > 0) {
+        trackUris.push(search.body.tracks.items[0].uri);
+      }
+
+    }
+
+    await spotifyApi.addTracksToPlaylist(
+      playlist.body.id,
+      trackUris
+    );
+
+    res.json({
+      message: "Playlist created!",
+      playlist: playlist.body.external_urls.spotify
+    });
+
+  } catch (err) {
+
+    console.error(err);
+    res.status(500).json({ error: "Something failed" });
+
   }
 
 });
 
 app.listen(3000, () => {
-  console.log("Server running at http://localhost:3000");
-});
-
-app.listen(3000, () => {
-  console.log("Server running at http://localhost:3000");
+  console.log("Running on http://localhost:3000");
 });
